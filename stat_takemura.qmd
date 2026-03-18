@@ -1,0 +1,786 @@
+---
+title: "竹村「統計 第2版」のRコード"
+author: "丸山祐造（千葉大学）"
+date: "2026-03-18"
+---
+
+## {{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
+
+# データの準備
+
+-   [竹村彰通「統計 第2版」共立出版](https://www.kyoritsu-pub.co.jp/book/b10010590.html)
+-   [データ置き場](https://www.akimichitakemura.com/athp/books.html)
+
+```{webr-r}
+quesdata <- read.csv("https://yuzo-maruyama.github.io/student.csv", header = T)
+```
+
+男子学生の身長，体重
+
+```{webr-r}
+shinchou.m <- quesdata[quesdata$seibetsu == 1, 1] # 身長
+taiju.m <- quesdata[quesdata$seibetsu == 1, 2] # 体重
+```
+
+男子学生（身長，父の身長，母の身長）のデータフレーム
+
+```{webr-r}
+height.m <- quesdata[quesdata$seibetsu == 1, c("shinchou", "father", "mother")]
+```
+
+女子学生（身長，父の身長）のデータフレーム
+
+```{webr-r}
+height.f <- quesdata[quesdata$seibetsu == 0, c("shinchou", "father")]
+```
+
+（自宅ダミー，恋人ありダミー）のデータフレーム
+
+```{webr-r}
+jitaku.koibito.m <- quesdata[quesdata$seibetsu == 1, c("jitaku", "koibito")] # 男子学生
+jitaku.koibito.f <- quesdata[quesdata$seibetsu == 0, c("jitaku", "koibito")] # 女子学生
+```
+
+# 1変量データの記述
+
+## 1変量データの分布とヒストグラム
+
+### プログラム 2.1
+
+ヒストグラム
+
+```{webr-r}
+h <- hist(shinchou.m,right=FALSE)
+```
+
+度数のカウントと相対度数
+
+```{webr-r}
+h$counts                                # 度数のカウント
+h$counts/length(shinchou.m)             # 相対度数
+```
+
+## 累積分布関数とパーセント点
+
+### プログラム 2.2
+
+経験分布関数のグラフ
+
+```{webr-r}
+plot(ecdf(shinchou.m),do.points=T, verticals=F)
+```
+
+経験分布関数のグラフ（縦方向にも折れ線でつなぐバージョン）
+
+```{webr-r}
+plot(ecdf(shinchou.m), do.points=FALSE, verticals=TRUE)  # 描画
+```
+
+### プログラム 2.x
+
+箱ひげ図
+
+```{webr-r}
+boxplot(shinchou.m)
+```
+
+## 平均と標準偏差
+
+### プログラム 2.3
+
+$n$次元ベクトル$x_1,\dots,x_n$に対して，$x_i\in (\bar{x}-s,\bar{x}+s)$ならばTRUEとする真偽値を$n$次元ベクトルで返す関数
+
+```{webr-r}
+inrange <- function(x){                         # 関数定義
+  m <- mean(x);   n <- length(x);   s <- sd(x)*sqrt((n-1)/n)
+  (x > m-s) & (x < m+s)
+}
+```
+
+```{webr-r}
+sum(inrange(shinchou.m))/length(shinchou.m)     # 割合
+```
+
+# 多変量データの記述
+
+## 2変量データの散布図と相関係数
+
+### プログラム 3.x
+
+男子学生の身長と体重の散布図
+
+```{webr-r}
+plot(shinchou.m, taiju.m)
+```
+
+男子学生の身長と体重の相関係数
+
+```{webr-r}
+cor(shinchou.m, taiju.m)
+```
+
+## 3変量以上のデータの表示
+
+### プログラム 3.x
+
+1変数毎の要約統計量
+
+```{webr-r}
+summary(height.m)
+```
+
+相関係数行列
+
+```{webr-r}
+cor(height.m)
+```
+
+分散共分散行列（Rでは$n$ではなく$n-1$で除した分散，共分散）
+
+```{webr-r}
+cov(height.m)
+```
+
+散布図行列
+
+```{webr-r}
+pairs(height.m)
+```
+
+## 分割表
+
+### プログラム 3.x
+
+男子学生
+
+```{webr-r}
+jitaku.koibito.tab.m <- table(jitaku = jitaku.koibito.m$jitaku, koibito = jitaku.koibito.m$koibito)
+jitaku.koibito.tab.m
+addmargins(jitaku.koibito.tab.m) # 行和，列和を追加
+```
+
+女子学生
+
+```{webr-r}
+jitaku.koibito.tab.f <- table(jitaku = jitaku.koibito.f$jitaku, koibito = jitaku.koibito.f$koibito)
+jitaku.koibito.tab.f
+addmargins(jitaku.koibito.tab.f) # 行和，列和を追加
+```
+
+# 最小二乗法と回帰分析
+
+## 単回帰分析
+
+### プログラム 4.1
+
+```{webr-r}
+x <- c(1,2,3,4); y <- c(11.4, 12.6, 13.7, 15.2)
+lm(y ~ x)                               # 回帰式を求める
+plot(x,y)                               # 散布図
+abline(10.1333, 1.2667)                 # 直線を加える 式(4.2)
+abline(10.1, 1.25)                      # 直線を加える 式(4.6)
+```
+
+### プログラム 4.2（丸山による修正あり）
+
+```{webr-r}
+y <- lm(shinchou ~ father, data=height.m)
+plot(height.m$father, height.m$shinchou)
+abline(y)               #  回帰直線を書き加える
+```
+
+## 重回帰分析
+
+### プログラム 4.x
+
+重回帰分析
+
+```{webr-r}
+y <- lm(shinchou ~ father + mother, data=height.m)
+summary(y)
+```
+
+最小二乗解と決定係数$R^2$
+
+```{webr-r}
+summary(y)$coefficients[,1] # 最小二乗解
+summary(y)$r.squared # 決定係数 R^2
+```
+
+# 多変量解析の方法
+
+## 主成分分析
+
+### プログラム 5.1 （丸山による修正あり）
+
+平均偏差行列
+
+```{webr-r}
+danshi.m <-  height.m$shinchou - mean(height.m$shinchou)
+father.m <-  height.m$father - mean(height.m$father)
+mother.m <-  height.m$mother - mean(height.m$mother)
+tildex <- cbind(danshi.m, father.m, mother.m)
+```
+
+平均偏差行列　別解
+
+```{webr-r}
+tildex <- scale(height.m,center = TRUE, scale = FALSE)
+```
+
+特異値分解
+
+```{webr-r}
+svdout <- svd(tildex)
+h <- svdout$u ;  d <- svdout$d ; a <- svdout$v
+```
+
+主成分係数ベクトル
+
+```{webr-r}
+a[,1] ; a[,2]
+```
+
+（分散を１に基準化した）主成分得点ベクトル
+
+```{webr-r}
+p1score <- h[,1] ; p2score <- h[,2]
+```
+
+寄与率
+
+```{webr-r}
+d^2/sum(d^2)
+```
+
+第１主成分得点と第２主成分得点の散布図（図5.4）
+
+```{webr-r}
+plot(p1score,p2score)
+```
+
+### プログラム 5.x
+
+prcomp の利用
+
+```{webr-r}
+ p.1 <- prcomp(height.m, scale = FALSE)
+ summary(p.1)
+```
+
+```{webr-r}
+names(p.1)
+```
+
+第１主成分得点と第２主成分得点の散布図（図5.4）
+
+```{webr-r}
+plot(p.1$x[,1],p.1$x[,2])
+```
+
+## 判別分析
+
+### 図5.5
+
+```{webr-r}
+plot(height.m[,1:2], pch=20)       # 男子はドット
+points(height.f, pch="X")    # 女子は X
+```
+
+### プログラム 5.2
+
+平均ベクトルおよび分散共分散行列
+
+```{webr-r}
+meanm  <- c(mean(height.m[,1]), mean(height.m[,2]))
+meanf  <- c(mean(height.f[,1]), mean(height.f[,2]))
+varm  <- cov(height.m[,1:2])
+varf  <- cov(height.f)
+```
+
+自由度とプールした分散共分散行列
+
+```{webr-r}
+dfm <- nrow(height.m) -1     # 男子自由度
+dff <- nrow(height.f) -1     # 女子自由度
+df <- dfm + dff
+s <- (dfm * varm + dff * varf)/df # プールした分散共分散行列
+```
+
+式(5.7)を最大化するベクトル $a\qquad a\propto S^{-1}(\bar{x}_1-\bar{x}_2)$
+
+```{webr-r}
+discrim.vector <- solve(s, meanm - meanf, tol = 1e-7)
+discrim.vector
+```
+
+線形判別関数の切片 $a'(\bar{x}_1+\bar{x}_2)/2$
+
+```{webr-r}
+meanmf <- (meanm + meanf) / 2
+const <- sum(discrim.vector * meanmf); const
+```
+
+### プログラム 5.3
+
+判別関数
+
+```{webr-r}
+discrim <- function(x){ sum(discrim.vector * x) - const}
+```
+
+サンプルサイズ
+
+```{webr-r}
+nm <- nrow(height.m);  nf <- nrow(height.f)
+n <- nm + nf
+```
+
+誤判別数の計算
+
+```{webr-r}
+sum(apply(height.f,1,discrim)>0)
+sum(apply(height.m[,1:2],1,discrim)<0)
+```
+
+男女を区別した散布図を書き判別直線を書き加える
+
+```{webr-r}
+plot(height.m[,1:2], pch=20)       # 男子はドット
+points(height.f, pch="X")    # 女子は X
+abline(const/discrim.vector[2], - discrim.vector[1]/discrim.vector[2])
+```
+
+# 主な分布
+
+## この章で使うデータ
+
+[プロシャ陸軍の14個の連隊において馬に蹴られて死んだ兵士の数](https://datarepository.wolframcloud.com/resources/Prussian-Horse-Kick-Data)
+
+```{webr-r}
+Prussion <- read.csv("https://yuzo-maruyama.github.io/Prussian-Horse-Kick-Data.csv",  header = T)
+```
+
+## ポアソン分布
+
+```{webr-r}
+head(Prussion)
+```
+
+死者数の頻度分布
+
+```{webr-r}
+Prussion.1 <- Prussion[,-1]
+death <- NULL
+for(i in 0:max(Prussion.1)){
+  death <- c(death, sum(Prussion[,-1] == i))
+}
+n <- nrow(Prussion.1)*ncol(Prussion.1)
+death.1 <- rbind(death, death/n)
+colnames(death.1) <- 0:max(Prussion.1)
+rownames(death.1) <- c("frequency","relative frequency")
+death.1
+```
+
+「年・連隊」あたりの平均死者数を期待値とするポアソン分布との比較
+
+```{webr-r}
+our.lambda <- sum(death*(0:4))/n
+dpois(0:4,lambda=our.lambda)
+```
+
+## 正規分布
+
+```{webr-r}
+hist(shinchou.m, right=FALSE, freq=FALSE)
+mu <- mean(shinchou.m);  s <- sd(shinchou.m)
+curve(dnorm(x,mean=mu,sd=s), mu-3*s, mu+3*s, ylab="", add=TRUE)
+```
+
+# 大数の法則と中心極限定理
+
+## 大数の法則
+
+### プログラム 9.1
+
+```{webr-r}
+nmax <- 1000;  p <- 0.5
+meanvec <- numeric(nmax)
+```
+
+幾何分布に従う乱数を発生させて，賞金に変換
+
+```{webr-r}
+geomvector <- rgeom(nmax, p)
+shokin <- sapply(geomvector, function(x) 2^x)    # 賞金に変換
+```
+
+各回までの平均値のリストを作って描画
+
+```{webr-r}
+dim(meanvec) <- nmax;  meanvec[1] <- shokin[1]
+for (n in 2:nmax) {
+    meanvec[n] <- meanvec[n-1] + (shokin[n]-meanvec[n-1])/n
+}
+plot(1:nmax, meanvec, xlab="time", ylab="ave")
+```
+
+## 中心極限定理
+
+### プログラム 9.2
+
+成功確率を $p=0.7$ として $n=5, \ 30$ の場合の確率関数(の$n$倍)を描く
+
+大数の法則のスケールでの二項確率関数の比較（図 9.2）
+
+```{webr-r}
+p <- 0.7
+n <- c(5,30)
+plot((0:n[2])/n[2], n[2]*dbinom(0:n[2], n[2], p), type="l", ylab="", xlab="")
+lines((0:n[1])/n[1], n[1]*dbinom(0:n[1], n[1], p), ylab="", xlab="")
+```
+
+### プログラム 9.3
+
+中心極限定理のスケールでの二項分布の確率関数 \* $x$ 軸 $$ \sqrt{n}\left(\frac{i}{n}-p\right) \quad i=0,\dots,n$$ \* $y$ 軸 $$ \sqrt{n} \binom{n}{i}p^i(1-p)^{n-i}\quad i=0,\dots,n$$
+
+```{webr-r}
+xseq <- function(n, p){ sqrt(n)*((0:n)/n-p) }
+yseq <- function(n, p){ sqrt(n)*(dbinom((0:n),n,p)) }
+```
+
+正規分布$N(0,p(1-p))$：$[-3\sqrt{p(1-p)},3\sqrt{p(1-p)}]$の範囲で３０分割 \* $x$ 軸 $$ x_i=-3\sqrt{p(1-p)}+0.2i\sqrt{p(1-p)}\quad i=0,\dots,30$$ \* $y$ 軸 $$ y_i=\frac{1}{\sqrt{2\pi}\sqrt{p(1-p)}}\exp\left(-\frac{x_i^2}{2p(1-p)}\right)\quad i=0,\dots,30$$
+
+```{webr-r}
+std <- sqrt(p*(1-p))                      # 標準偏差
+xx <- seq(-3.0*std, 3.0*std, length=31)   # 30分割
+yy <- dnorm(xx/std)/std
+```
+
+$n=5, \ 30$ の場合の確率関数を描く
+
+中心極限定理のスケールでの二項確率関数の比較（図 9.3）
+
+```{webr-r}
+plot(xseq(n[1], p), yseq(n[1], p), type="l", xlab="", ylab="", ylim=c(0,1), xlim=c(-1.4, 1.4))
+lines(xseq(n[2], p), yseq(n[2], p), xlab="", ylab="")
+lines(xx, yy, lty="dashed", xlab="",ylab="") # 正規分布の密度関数
+```
+
+### プログラム 9.4
+
+```{webr-r}
+simsize <- 100000			# シミュレーションサイズ
+n <- 3					# サンプルサイズ
+zlist <-  vector(mode="numeric", length=simsize)
+for(i in 1:simsize){
+      zlist[i] <- sqrt(12/n)*(sum(runif(n)) - n/2)
+}
+percentlist <- floor(simsize * c(0.025, 0.05, 0.25, 0.40))
+zlist <- sort(zlist)
+zlist[percentlist]
+```
+
+### プログラム 9.5
+
+式(9.5)で与えられる一様乱数3個の和の密度関数の定義
+
+```{webr-r}
+f <- function(x){
+  if(abs(x) > 3) return(0.0)
+  if(abs(x) > 1 && abs(x) <= 3) return((3.0-abs(x))^2/16)
+  if( abs(x) <= 1) return((3-abs(x)^2)/8)
+}
+```
+
+図 9.4 の描画
+
+```{webr-r}
+xx <- seq(-3,3,length=60)
+plot(xx, sapply(xx,f), type="l", xlab="", ylab="", ylim=c(0,0.43))
+# 正規分布の密度関数を破線で加える
+curve(dnorm(x),-3,3,add=TRUE,lty="dashed")
+```
+
+# 統計的モデル
+
+## 母集団と標本
+
+### プログラム 10.x
+
+```{webr-r}
+tsubo <- c(1,2,2,3,3,3,3,3,3,3)
+sample(tsubo,3)
+sample(tsubo,3,replace=TRUE)
+```
+
+# 点推定論
+
+## 平均二乗誤差と不偏推定量
+
+### プログラム 11.1
+
+```{webr-r}
+n <- 11   #              n を奇数とする
+simsize <- 10000
+meanvec <- NULL; medvec <- NULL
+#meanvec <-  vector(mode="numeric", length=simsize)
+#medvec <-  vector(mode="numeric", length=simsize)
+```
+
+同じ乱数で mean と median を計算
+
+```{webr-r}
+for(i in 1:simsize){
+      normalvec <- rnorm(n)
+      meanvec <- c(meanvec, mean(normalvec))
+      medvec <- c(medvec, median(normalvec))
+#      meanvec[i]=mean(normalvec)
+#      medvec[i]=median(normalvec)
+}
+```
+
+mean と median の分散及び共分散を計算
+
+```{webr-r}
+n*cov(cbind(meanvec,medvec))
+n*cov(cbind(meanvec,medvec-meanvec))
+```
+
+## 尤度関数と最尤推定量
+
+### プログラム 11.2
+
+各血液型の人数
+
+```{webr-r}
+na <- 145; no <- 107; nb <- 71; nab <- 31
+```
+
+対数尤度関数の定義
+
+```{webr-r}
+loglikelihood <- function(theta){
+     alpha <- theta[1]; beta <- theta[2]
+     return(na*log(alpha^2 + 2*alpha*(1-alpha-beta))
+            + 2*no*log(1-alpha-beta)
+            + nb*log(beta^2 + 2*beta*(1-alpha-beta))
+            + nab*log(2*alpha*beta))
+}
+```
+
+初期値を $\alpha=0.3$, $\beta=0.15$として，関数optimによる数値的最大化
+
+```{webr-r}
+optim(c(0.3,0.15),loglikelihood,control=list(fnscale=-1))
+```
+
+# 典型的な検定問題
+
+## $t$ 検定
+
+```{webr-r}
+t.test(height.m[,1], height.m[,2])   # 通常の2標本比較の場合
+t.test(height.m[,1] - height.m[,2])   # 対標本の場合
+```
+
+対標本の場合の P値 のシミュレーション計算
+
+```{webr-r}
+simsize <- 10000;   df <- nrow(height.m)-1
+trandvec <- rt(simsize, df)
+length(trandvec[abs(trandvec) > 10.806])
+```
+
+## 成功確率の検定
+
+### プログラム 13.2
+
+```{webr-r}
+njitaku <- 176; ngeshuku <- 148;  nkoibito <- 120; ngk <- 61 #  下宿かつ恋人ありの人数
+tsubo <-  c(rep(0, njitaku),rep(1, ngeshuku))  #  壷を作る
+```
+
+P値をシミュレーションで求める
+
+```{webr-r}
+simsize <- 10000;  count <- 0
+for( j in 1:simsize){
+         x <- sum(sample(tsubo, nkoibito))
+         if( x >= ngk) count <- count + 1
+}
+count
+```
+
+### プログラム 13.3
+
+帰無仮説のもとでの最尤推定量をパラメータ値とする分布のもとでの標本分布のシミュレーション
+
+```{webr-r}
+ml0 <- c(0.40660, 0.30486, 0.19734, 0.09120);  n <- 354
+twologlr0 <- 0.08611
+```
+
+Hardy-Weinberg のもとでの確率
+
+```{webr-r}
+nullplist <- function(theta){
+     alpha <- theta[1]; beta <- theta[2]
+     c((alpha^2 + 2*alpha*(1-alpha-beta)),   # A
+       (1-alpha-beta)^2,                     # O
+       (beta^2 + 2*beta*(1-alpha-beta)),     # B
+       (2*alpha*beta))                       #AB
+}
+```
+
+尤度関数の定義, 11章と同様
+
+```{webr-r}
+# freq[1]:na, freq[2]: no, freq[3]: nb, freq[4]: nab
+loglikelihood <- function(theta){
+   sum(freq*log(nullplist(theta)))
+}
+```
+
+シミュレーション
+
+```{webr-r}
+simsize <- 1000;  count <- 0
+for(j in 1:simsize){
+      freq <- rmultinom(1, n, ml0)
+      ml1sim <- freq/n
+      theta=optim(c(0.3,0.15), loglikelihood,control=list(fnscale=-1))$par
+      ml0sim <- nullplist(theta)
+      twologlrsim <- 2 * sum(freq*log(ml1sim/ml0sim))
+      if(twologlrsim >= twologlr0) count <- count + 1
+}
+count
+```
+
+## カイ二乗適合度検定
+
+```{webr-r}
+mean0 <- 0.7; n <- 280; observed_chisq <- 1.90662
+simsize <-  10000;  count <- 0
+```
+
+```{webr-r}
+for(j in 1:simsize){
+      #  ポアソン乱数の発生，平均，度数
+      randvec <- rpois(n,mean0);   meansim <- mean(randvec)
+      maxw <- max(randvec)+1
+      randhist <- hist(randvec, right=FALSE, plot=FALSE, breaks=0:maxw)$counts
+      ofreq <- c(0,0,0,0,0)
+      for(i in 1:min(4,maxw)) ofreq[i] <- randhist[i]
+      ofreq[5] <- 0; ofreq[5] <-  n - sum(ofreq)
+      # 標本平均を母数とする分布の確率をえる
+      plist <-  c(0,0,0,0,0)
+      for(i in 1:4) plist[i]=dpois(i-1,meansim)
+      plist[5] <- 0; plist[5] <- 1-sum(plist)
+      efreq <- n*plist             #  期待頻度
+      diff <- ofreq -  efreq       #  観測頻度と期待頻度の差
+      chisqsim = sum(diff^2/efreq) # カイ二乗統計量の計算
+      if(chisqsim >= observed_chisq) count = count + 1
+}
+count
+```
+
+# 区間推定論
+
+## 最尤推定量に基づく信頼区間
+
+### プログラム 14.x （プログラム 11.2 の続き）
+
+各血液型の人数
+
+```{webr-r}
+na <- 145; no <- 107; nb <- 71; nab <- 31
+```
+
+対数尤度関数の定義
+
+```{webr-r}
+loglikelihood <- function(theta){
+     alpha <- theta[1]; beta <- theta[2]
+     return(na*log(alpha^2 + 2*alpha*(1-alpha-beta))
+            + 2*no*log(1-alpha-beta)
+            + nb*log(beta^2 + 2*beta*(1-alpha-beta))
+            + nab*log(2*alpha*beta))
+}
+```
+
+初期値を $\alpha=0.3$, $\beta=0.15$として，関数optimによる数値的最大化する。ヘッセ行列を保存する。
+
+```{webr-r}
+opt <- optim(c(0.3,0.15),loglikelihood,control=list(fnscale=-1), hessian = TRUE)
+solve(-opt$hessian/354)
+```
+
+# 線形回帰モデルの推定と検定
+
+## 回帰係数の推定と検定
+
+重回帰分析
+
+```{webr-r}
+y <- lm(shinchou ~ father + mother, data=height.m)
+z <- summary(y)
+z
+```
+
+summary(lm())のオブジェクトの内容
+
+最小二乗解 $b=(X'X)^{-1}X'y$
+
+```{webr-r}
+z$coefficients[,1]
+```
+
+残差ベクトル $e=y-Xb$
+
+```{webr-r}
+head(z$residuals)
+```
+
+$\sigma^2$の不偏推定量 $\hat{\sigma}^2=\|e\|^2/(n-p-1)$。その平方根 $\hat{\sigma}$
+
+```{webr-r}
+z$sigma
+```
+
+$b_i$の標準誤差 $\hat{\sigma}(X'X)^{ii}$\
+ただし$(X'X)^{ii}$は$X'X$の逆行列の$(i,i)$要素
+
+```{webr-r}
+z$coefficients[,2]
+```
+
+$t$ 値 $$ t_i=\frac{b_i}{\hat{\sigma}(X'X)^{ii}}$$
+
+```{webr-r}
+z$coefficients[,3]
+```
+
+P値 $$ \mathrm{Pr}(|T_{n-p-1}|\geq t_i) $$ ただし，$T_{n-p-1}$は自由度$n-p-1$の $t$ 分布に従う確率変数
+
+```{webr-r}
+z$coefficients[,4]
+```
+
+決定係数$R^2$
+
+```{webr-r}
+z$r.squared
+```
+
+自由度修正決定係数 $$1-\frac{n-1}{n-p-1}(1-R^2)$$
+
+```{webr-r}
+z$adj.r.squared
+```
+
+F統計量：定数項を除く全ての回帰係数が$0$とする帰無仮説の検定のための統計量
+
+```{webr-r}
+z$fstatistic
+```
