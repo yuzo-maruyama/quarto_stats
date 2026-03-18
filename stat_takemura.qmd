@@ -3,9 +3,6 @@ title: "竹村「統計 第2版」のRコード"
 author: "丸山祐造（千葉大学）"
 date: "2026-03-18"
 ---
-
-## {{< include ./_extensions/r-wasm/live/_knitr.qmd >}}
-
 # データの準備
 
 -   [竹村彰通「統計 第2版」共立出版](https://www.kyoritsu-pub.co.jp/book/b10010590.html)
@@ -442,14 +439,18 @@ lines((0:n[1])/n[1], n[1]*dbinom(0:n[1], n[1], p), ylab="", xlab="")
 
 ### プログラム 9.3
 
-中心極限定理のスケールでの二項分布の確率関数 \* $x$ 軸 $$ \sqrt{n}\left(\frac{i}{n}-p\right) \quad i=0,\dots,n$$ \* $y$ 軸 $$ \sqrt{n} \binom{n}{i}p^i(1-p)^{n-i}\quad i=0,\dots,n$$
+中心極限定理のスケールでの二項分布の確率関数
+* $x$ 軸 $$ \sqrt{n}\left(\frac{i}{n}-p\right) \quad i=0,\dots,n$$
+* $y$ 軸 $$ \sqrt{n} \binom{n}{i}p^i(1-p)^{n-i}\quad i=0,\dots,n$$
 
 ```{webr-r}
 xseq <- function(n, p){ sqrt(n)*((0:n)/n-p) }
 yseq <- function(n, p){ sqrt(n)*(dbinom((0:n),n,p)) }
 ```
 
-正規分布$N(0,p(1-p))$：$[-3\sqrt{p(1-p)},3\sqrt{p(1-p)}]$の範囲で３０分割 \* $x$ 軸 $$ x_i=-3\sqrt{p(1-p)}+0.2i\sqrt{p(1-p)}\quad i=0,\dots,30$$ \* $y$ 軸 $$ y_i=\frac{1}{\sqrt{2\pi}\sqrt{p(1-p)}}\exp\left(-\frac{x_i^2}{2p(1-p)}\right)\quad i=0,\dots,30$$
+正規分布$N(0,p(1-p))$：$[-3\sqrt{p(1-p)},3\sqrt{p(1-p)}]$の範囲で30分割
+* $x$ 軸 $$ x_i=-3\sqrt{p(1-p)}+0.2i\sqrt{p(1-p)}\quad i=0,\dots,30$$
+* $y$ 軸 $$ y_i=\frac{1}{\sqrt{2\pi}\sqrt{p(1-p)}}\exp\left(-\frac{x_i^2}{2p(1-p)}\right)\quad i=0,\dots,30$$
 
 ```{webr-r}
 std <- sqrt(p*(1-p))                      # 標準偏差
@@ -524,8 +525,6 @@ sample(tsubo,3,replace=TRUE)
 n <- 11   #              n を奇数とする
 simsize <- 10000
 meanvec <- NULL; medvec <- NULL
-#meanvec <-  vector(mode="numeric", length=simsize)
-#medvec <-  vector(mode="numeric", length=simsize)
 ```
 
 同じ乱数で mean と median を計算
@@ -535,8 +534,6 @@ for(i in 1:simsize){
       normalvec <- rnorm(n)
       meanvec <- c(meanvec, mean(normalvec))
       medvec <- c(medvec, median(normalvec))
-#      meanvec[i]=mean(normalvec)
-#      medvec[i]=median(normalvec)
 }
 ```
 
@@ -636,7 +633,6 @@ nullplist <- function(theta){
 尤度関数の定義, 11章と同様
 
 ```{webr-r}
-# freq[1]:na, freq[2]: no, freq[3]: nb, freq[4]: nab
 loglikelihood <- function(theta){
    sum(freq*log(nullplist(theta)))
 }
