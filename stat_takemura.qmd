@@ -440,6 +440,7 @@ lines((0:n[1])/n[1], n[1]*dbinom(0:n[1], n[1], p), ylab="", xlab="")
 ### プログラム 9.3
 
 中心極限定理のスケールでの二項分布の確率関数
+
 * $x$ 軸 $$ \sqrt{n}\left(\frac{i}{n}-p\right) \quad i=0,\dots,n$$
 * $y$ 軸 $$ \sqrt{n} \binom{n}{i}p^i(1-p)^{n-i}\quad i=0,\dots,n$$
 
@@ -449,6 +450,7 @@ yseq <- function(n, p){ sqrt(n)*(dbinom((0:n),n,p)) }
 ```
 
 正規分布$N(0,p(1-p))$：$[-3\sqrt{p(1-p)},3\sqrt{p(1-p)}]$の範囲で30分割
+
 * $x$ 軸 $$ x_i=-3\sqrt{p(1-p)}+0.2i\sqrt{p(1-p)}\quad i=0,\dots,30$$
 * $y$ 軸 $$ y_i=\frac{1}{\sqrt{2\pi}\sqrt{p(1-p)}}\exp\left(-\frac{x_i^2}{2p(1-p)}\right)\quad i=0,\dots,30$$
 
